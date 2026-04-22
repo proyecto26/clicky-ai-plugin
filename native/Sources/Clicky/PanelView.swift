@@ -23,6 +23,8 @@ struct PanelView: View {
                     installBanner
                 } else if !viewModel.hasScreenRecordingPermission {
                     screenRecordingBanner
+                } else if viewModel.requiresRelaunchForScreenRecording {
+                    relaunchBanner
                 } else {
                     readyBody
                 }
@@ -107,7 +109,7 @@ struct PanelView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.white)
             }
-            Text("Clicky needs Screen Recording to capture your display before asking Claude. After granting, quit and relaunch Clicky so macOS picks up the change.")
+            Text("Clicky needs Screen Recording to capture your display before asking Claude. The banner clears automatically as soon as you grant — no restart needed.")
                 .font(.system(size: 12))
                 .foregroundColor(.white.opacity(0.75))
                 .fixedSize(horizontal: false, vertical: true)
@@ -144,6 +146,32 @@ struct PanelView: View {
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.white.opacity(0.04))
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.orange.opacity(0.4), lineWidth: 1))
+        )
+    }
+
+    /// Shown when Screen Recording is already granted in System Settings
+    /// but this process was launched before the grant, so ScreenCaptureKit
+    /// has cached a denial that can't be cleared without a restart.
+    private var relaunchBanner: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.clockwise.circle.fill")
+                    .foregroundColor(.blue)
+                Text("Almost ready — relaunch Clicky")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+            Text("Screen Recording is granted, but macOS only activates it for apps launched after the grant. Click Quit in the footer, then reopen Clicky.")
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.75))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white.opacity(0.04))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue.opacity(0.4), lineWidth: 1))
         )
     }
 

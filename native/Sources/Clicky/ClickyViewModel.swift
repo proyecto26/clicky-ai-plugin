@@ -18,10 +18,37 @@ final class ClickyViewModel: ObservableObject {
     @Published var streamingText: String = ""
     @Published var lastError: String?
     @Published var lastSessionId: String?
-    @Published var hasScreenRecordingPermission: Bool = true
+
+    /// Owned here so SwiftUI views can observe it directly. The watcher
+    /// auto-updates its own @Published state; we mirror it here via Combine
+    /// to keep the PanelView's observation surface tidy.
+    let screenRecordingPermission = ScreenRecordingPermission()
+    @Published var hasScreenRecordingPermission: Bool
+    @Published var requiresRelaunchForScreenRecording: Bool = false
+    private var permissionObservation: AnyCancellable?
+    private var requiresRelaunchObservation: AnyCancellable?
 
     private let logger = Logger(subsystem: "com.proyecto26.clicky", category: "ClickyViewModel")
     private var currentTask: Task<Void, Never>?
+
+    init() {
+        self.hasScreenRecordingPermission = screenRecordingPermission.isGranted
+        permissionObservation = screenRecordingPermission.$isGranted
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] granted in
+                self?.hasScreenRecordingPermission = granted
+            }
+        requiresRelaunchObservation = screenRecordingPermission.$requiresRelaunch
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] requiresRelaunch in
+                self?.requiresRelaunchForScreenRecording = requiresRelaunch
+            }
+        // If the banner would appear, start live-watching TCC immediately
+        // so the user's grant flips the UI without manual intervention.
+        if !hasScreenRecordingPermission {
+            screenRecordingPermission.startWatching()
+        }
+    }
 
     /// System prompt derived from the upstream Clicky persona. Kept tight so
     /// the CLI's input tokens stay low and the reply matches the text-surface
@@ -47,20 +74,14 @@ final class ClickyViewModel: ObservableObject {
             claudeBinaryPath = nil
             claudeVersion = nil
         }
-        hasScreenRecordingPermission = ScreenRecordingPermission.isGranted()
     }
 
-    /// Triggers the macOS Screen Recording TCC prompt. Users often need to
-    /// quit and relaunch Clicky after granting — that behaviour is surfaced
-    /// in the panel copy, not silently handled here.
     func requestScreenRecordingPermission() {
-        ScreenRecordingPermission.request()
-        // Re-probe so the banner updates if the user grants immediately.
-        hasScreenRecordingPermission = ScreenRecordingPermission.isGranted()
+        screenRecordingPermission.request()
     }
 
     func openScreenRecordingSettings() {
-        ScreenRecordingPermission.openSystemSettings()
+        screenRecordingPermission.openSystemSettings()
     }
 
     /// Captures the primary display and runs a single turn through the CLI.
@@ -112,11 +133,28 @@ final class ClickyViewModel: ObservableObject {
             } catch let error as ClaudeCLIError {
                 lastError = error.description
             } catch let error as ScreenCaptureError {
-                lastError = error.description
+                // SCShareableContent cached a TCC denial at process launch
+                // and can't be recovered without a relaunch. Replace the
+                // raw framework error with a friendlier message — the
+                // relaunch banner will explain what to do next.
+                if isTCCDeclinedError(error) {
+                    lastError = nil
+                    screenRecordingPermission.handleRuntimeTCCDenial()
+                } else {
+                    lastError = error.description
+                }
             } catch {
                 lastError = error.localizedDescription
             }
         }
+    }
+
+    private func isTCCDeclinedError(_ error: ScreenCaptureError) -> Bool {
+        let text = String(describing: error).lowercased()
+        return text.contains("declined tcc")
+            || text.contains("not authorized")
+            || text.contains("screen recording")
+            || text.contains("could not create image")
     }
 
     func cancelCurrentTurn() {
