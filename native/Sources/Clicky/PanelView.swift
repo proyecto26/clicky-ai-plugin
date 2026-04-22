@@ -25,6 +25,10 @@ struct PanelView: View {
                     screenRecordingBanner
                 } else if viewModel.requiresRelaunchForScreenRecording {
                     relaunchBanner
+                } else if !viewModel.hasAccessibilityPermission {
+                    accessibilityBanner
+                } else if let problem = viewModel.dictationPermissionProblem {
+                    dictationPermissionBanner(problem)
                 } else {
                     readyBody
                 }
@@ -149,6 +153,123 @@ struct PanelView: View {
         )
     }
 
+    /// Shown when the mic or speech recognition TCC was denied mid-
+    /// session. Appears only after the user has actually tried to
+    /// push-to-talk — pre-flight isn't valuable here because macOS
+    /// will show its own request dialog on first attempt.
+    private func dictationPermissionBanner(_ problem: DictationPermissionProblem) -> some View {
+        let (title, body, openSettings): (String, String, () -> Void) = {
+            switch problem {
+            case .microphoneAccessDenied:
+                return (
+                    "Microphone access needed",
+                    "Clicky can't hear you without mic access. Open System Settings and enable Clicky under Privacy & Security → Microphone.",
+                    viewModel.openMicrophoneSettings
+                )
+            case .speechRecognitionDenied:
+                return (
+                    "Speech recognition needed",
+                    "Clicky uses Apple Speech to transcribe your voice locally. Open System Settings and enable Clicky under Privacy & Security → Speech Recognition.",
+                    viewModel.openSpeechRecognitionSettings
+                )
+            }
+        }()
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "mic.slash")
+                    .foregroundColor(.orange)
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+            Text(body)
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.75))
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                Button(action: viewModel.retryPermissions) {
+                    Text("Retry")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.blue))
+                }
+                .buttonStyle(.plain)
+
+                Button(action: openSettings) {
+                    Text("Open settings")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white.opacity(0.85))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.08)))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white.opacity(0.04))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.orange.opacity(0.4), lineWidth: 1))
+        )
+    }
+
+    /// Shown when push-to-talk can't observe modifier keys because
+    /// Accessibility isn't granted. Same grammar as the screen-
+    /// recording banner — two buttons, system-keyed copy.
+    private var accessibilityBanner: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "keyboard")
+                    .foregroundColor(.orange)
+                Text("Grant Accessibility")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+            Text("Clicky needs Accessibility to listen for Control+Option (push-to-talk). The banner clears automatically as soon as you grant — no restart needed.")
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.75))
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                Button {
+                    viewModel.requestAccessibilityPermission()
+                } label: {
+                    Text("Ask macOS")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.blue))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    viewModel.openAccessibilitySettings()
+                } label: {
+                    Text("Open settings")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white.opacity(0.85))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.08)))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white.opacity(0.04))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.orange.opacity(0.4), lineWidth: 1))
+        )
+    }
+
     /// Shown when Screen Recording is already granted in System Settings
     /// but this process was launched before the grant, so ScreenCaptureKit
     /// has cached a denial that can't be cleared without a restart.
@@ -177,9 +298,13 @@ struct PanelView: View {
 
     private var readyBody: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Ready. Ask clicky about anything on your screen.")
-                .font(.system(size: 12))
-                .foregroundColor(.white.opacity(0.75))
+            pushToTalkStateRow
+            if viewModel.state == .listening {
+                waveformBar
+            }
+            if let tag = viewModel.lastPointTag {
+                pointTagRow(tag)
+            }
 
             TextField("", text: $prompt, axis: .vertical)
                 .textFieldStyle(.plain)
@@ -249,6 +374,85 @@ struct PanelView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    /// State row: text + pulsing dot that reflects idle / listening /
+    /// thinking / speaking. Sits above the typed-prompt affordance so
+    /// voice is the primary entry but typing is always available.
+    private var pushToTalkStateRow: some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(stateDotColor)
+                .frame(width: 8, height: 8)
+                .shadow(color: stateDotColor.opacity(0.6), radius: 4)
+            Text(stateLabel)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.white.opacity(0.85))
+            Spacer()
+            Text("⌃⌥ to talk")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(.white.opacity(0.45))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(RoundedRectangle(cornerRadius: 4).fill(Color.white.opacity(0.08)))
+        }
+    }
+
+    private var stateLabel: String {
+        switch viewModel.state {
+        case .idle:      return "Ready. Hold ⌃⌥ to talk."
+        case .listening: return viewModel.dictationManager.partialTranscript.isEmpty
+            ? "Listening…"
+            : viewModel.dictationManager.partialTranscript
+        case .thinking:  return "Thinking…"
+        case .speaking:  return "Speaking…"
+        }
+    }
+
+    private var stateDotColor: Color {
+        switch viewModel.state {
+        case .idle:      return .green
+        case .listening: return .red
+        case .thinking:  return .blue
+        case .speaking:  return .purple
+        }
+    }
+
+    /// 12-bar horizontal waveform that tracks the dictation manager's
+    /// smoothed audio level. Each bar uses the same level value with a
+    /// slight phase offset so the row feels alive without needing an
+    /// actual FFT.
+    private var waveformBar: some View {
+        let level = max(0.05, viewModel.currentAudioLevel)
+        return HStack(spacing: 3) {
+            ForEach(0..<12, id: \.self) { index in
+                let phase = sin(Double(index) * 0.7 + Date().timeIntervalSince1970 * 4) * 0.3 + 0.7
+                let height = max(4, level * 32 * CGFloat(phase))
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color.red.opacity(0.8))
+                    .frame(width: 3, height: height)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 32)
+        .animation(.easeOut(duration: 0.1), value: viewModel.currentAudioLevel)
+    }
+
+    private func pointTagRow(_ tag: PointTag) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "target")
+                .font(.system(size: 10))
+                .foregroundColor(.blue.opacity(0.9))
+            Text(tag.label ?? "unlabeled element")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.white.opacity(0.85))
+            Text("(\(Int(tag.x)), \(Int(tag.y)))\(tag.screen.map { " screen \($0)" } ?? "")")
+                .font(.system(size: 10))
+                .foregroundColor(.white.opacity(0.45))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(RoundedRectangle(cornerRadius: 4).fill(Color.blue.opacity(0.12)))
     }
 
     private var footer: some View {

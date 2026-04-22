@@ -32,5 +32,7 @@
     <string>Clicky captures your screen so Claude can see what you're looking at and answer questions about it.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Clicky listens when you hold the push-to-talk hotkey so you can speak to Claude.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Clicky transcribes your voice locally via Apple's Speech framework so Claude can respond to what you said.</string>
 </dict>
 </plist>
