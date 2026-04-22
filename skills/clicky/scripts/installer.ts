@@ -46,8 +46,14 @@ export async function install(options: InstallOptions = {}): Promise<InstallResu
     ok: false,
     method: 'manual',
     reason:
-      `Automatic install failed. Download manually from https://github.com/${CLICKY_RELEASE_REPO}/releases ` +
-      `and copy Clicky.app to /Applications/. Underlying reason: ${dmgResult.reason}`,
+      `Automatic install isn't available yet (Clicky isn't notarized for public distribution — ` +
+      `the project is open-source and not Developer-Program-enrolled). Build from source in ~2 minutes:\n` +
+      `  git clone https://github.com/${CLICKY_RELEASE_REPO}.git\n` +
+      `  cd clicky-ai-plugin/native && make install\n\n` +
+      `That copies Clicky.app into /Applications/ signed with your free Apple Development certificate.\n` +
+      `Alternatively, if a pre-built DMG is attached to a release, download it at\n` +
+      `https://github.com/${CLICKY_RELEASE_REPO}/releases and right-click → Open to bypass Gatekeeper.\n` +
+      `Underlying reason: ${dmgResult.reason}`,
   };
 }
 

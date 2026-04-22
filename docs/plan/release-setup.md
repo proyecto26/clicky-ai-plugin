@@ -1,8 +1,19 @@
 # Release Pipeline Setup — one-time prerequisites
 
-Everything Track D (#19, #20, #23, #24) needs you to configure before
-the first `git tag v0.1.0 && git push --tags` will produce a real
-notarized DMG that `brew install` can pull.
+**Status: deferred.** The project is open source and the maintainer has
+elected not to enroll in the paid Apple Developer Program ($99/yr) yet.
+The CI workflow, cask formula, and tap-PR job are all scaffolded and
+dormant. They activate automatically once the secrets below are
+configured.
+
+**Current distribution model:** plugin via the Claude Code marketplace
+(works today, no signing), native app via source install (`git clone +
+make install`, uses a free Apple Development cert — see
+`native/README.md`). Pre-built DMGs are not published for casual users
+because unnotarized DMGs trigger Gatekeeper warnings.
+
+When you're ready to graduate to notarized releases + Homebrew cask
+installs, follow the one-time prerequisites below.
 
 ## 1. Apple Developer Program membership
 
