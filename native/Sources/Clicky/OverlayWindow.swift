@@ -33,6 +33,13 @@ final class OverlayWindow: NSWindow {
         hidesOnDeactivate = false
 
         let hostingView = NSHostingView(rootView: rootView)
+        // Disable NSHostingView's default "size to fit content" behaviour.
+        // The overlay's SwiftUI content is zero-sized whenever the cursor
+        // is hidden (opacity=0), which otherwise collapses the window to
+        // 0×0 and silently drops every animation.
+        hostingView.sizingOptions = []
+        hostingView.translatesAutoresizingMaskIntoConstraints = true
+        hostingView.autoresizingMask = [.width, .height]
         hostingView.frame = NSRect(origin: .zero, size: screen.frame.size)
         contentView = hostingView
 

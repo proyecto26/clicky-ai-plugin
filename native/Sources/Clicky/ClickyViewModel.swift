@@ -54,6 +54,13 @@ final class ClickyViewModel: ObservableObject {
 
     private let logger = Logger(subsystem: "com.proyecto26.clicky", category: "ClickyViewModel")
     private var currentTask: Task<Void, Never>?
+    /// Monotonically increasing counter incremented every time a turn is
+    /// started OR cancelled. Lets in-flight turns recognise when they've
+    /// been superseded — their defer blocks and catch handlers check the
+    /// generation and skip state mutations if they're no longer current,
+    /// so a cancelled turn can't stomp on the state that `cancelCurrentTurn`
+    /// (or the new turn the user kicked off) already wrote.
+    private var turnGeneration: Int = 0
     private var observations: Set<AnyCancellable> = []
 
     init() {
@@ -95,6 +102,18 @@ final class ClickyViewModel: ObservableObject {
             .sink { [weak self] transition in
                 self?.handleHotkeyTransition(transition)
             }
+            .store(in: &observations)
+
+        // Mirror state + mic power into OverlayManager so the always-on
+        // cursor buddy can render the right visual (triangle / waveform
+        // / spinner) without OverlayManager depending on the view model.
+        $state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in self?.overlayManager.voiceState = state }
+            .store(in: &observations)
+        $currentAudioLevel
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] level in self?.overlayManager.audioLevel = level }
             .store(in: &observations)
 
         if !hasScreenRecordingPermission {
@@ -159,7 +178,17 @@ final class ClickyViewModel: ObservableObject {
     private func handleHotkeyTransition(_ transition: PushToTalkShortcut.Transition) {
         switch transition {
         case .pressed:
-            guard !isRunningTurn, state == .idle else { return }
+            // Already listening → spurious synthetic press (modifier was
+            // held through a key tick). Ignore; let the release handle it.
+            if state == .listening { return }
+            // If Claude or ElevenLabs is taking forever, a second press
+            // should cut the in-flight turn and start a fresh one instead
+            // of being dropped. Cancel stops the screenshot → CLI → TTS
+            // chain synchronously and resets state to idle.
+            if isRunningTurn || state != .idle {
+                logger.info("hotkey press during state=\(String(describing: self.state), privacy: .public) — cancelling in-flight turn")
+                cancelCurrentTurn()
+            }
             startListening()
         case .released:
             guard state == .listening else { return }
@@ -200,6 +229,8 @@ final class ClickyViewModel: ObservableObject {
     func runTurn(userPrompt: String, thenSpeak: Bool = false) {
         guard !isRunningTurn else { return }
         currentTask?.cancel()
+        turnGeneration += 1
+        let thisTurn = turnGeneration
         isRunningTurn = true
         state = thenSpeak ? .thinking : state
         streamingText = ""
@@ -207,7 +238,15 @@ final class ClickyViewModel: ObservableObject {
         lastPointTag = nil
 
         currentTask = Task { @MainActor in
-            defer { isRunningTurn = false }
+            defer {
+                // Only clear the flag if this task is still the current
+                // generation. If the user interrupted us, cancelCurrentTurn
+                // already bumped the counter + reset isRunningTurn, and a
+                // new turn may already be underway.
+                if self.turnGeneration == thisTurn {
+                    self.isRunningTurn = false
+                }
+            }
             do {
                 let manifest = try await ScreenCapture.captureAllDisplays()
                 let binary = try ClaudeCLIRunner.locate()
@@ -274,14 +313,23 @@ final class ClickyViewModel: ObservableObject {
                     ))
                 }
 
-                state = .idle
+                if self.turnGeneration == thisTurn {
+                    state = .idle
+                }
             } catch is CancellationError {
-                lastError = "Cancelled."
-                state = .idle
+                // cancelCurrentTurn already wrote state (and may have
+                // started a new listening turn). Don't clobber it.
+                if self.turnGeneration == thisTurn {
+                    lastError = nil
+                    state = .idle
+                }
             } catch let error as ClaudeCLIError {
-                lastError = error.description
-                state = .idle
+                if self.turnGeneration == thisTurn {
+                    lastError = error.description
+                    state = .idle
+                }
             } catch let error as ScreenCaptureError {
+                guard self.turnGeneration == thisTurn else { return }
                 if isTCCDeclinedError(error) {
                     lastError = nil
                     screenRecordingPermission.handleRuntimeTCCDenial()
@@ -290,8 +338,10 @@ final class ClickyViewModel: ObservableObject {
                 }
                 state = .idle
             } catch {
-                lastError = error.localizedDescription
-                state = .idle
+                if self.turnGeneration == thisTurn {
+                    lastError = error.localizedDescription
+                    state = .idle
+                }
             }
         }
     }
@@ -304,8 +354,15 @@ final class ClickyViewModel: ObservableObject {
 
     func cancelCurrentTurn() {
         currentTask?.cancel()
+        currentTask = nil
+        // Bump the generation so the cancelled task's defer/catch blocks
+        // see they're no longer current and skip their state mutations.
+        turnGeneration += 1
         textToSpeech.stop()
         dictationManager.cancelListening()
+        isRunningTurn = false
+        streamingText = ""
+        lastError = nil
         state = .idle
     }
 

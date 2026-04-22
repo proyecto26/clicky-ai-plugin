@@ -26,6 +26,16 @@ final class OverlayManager: ObservableObject {
     /// decide whether to show/hide based on screenFrame match.
     @Published private(set) var activeTarget: BlueCursorTarget?
 
+    /// Mirror of ClickyViewModel.state so each BlueCursorView can render
+    /// the right shape at the cursor (triangle / waveform / spinner).
+    /// Wired by ClickyViewModel via Combine to keep OverlayManager free
+    /// of a back-reference to the view model.
+    @Published var voiceState: CompanionState = .idle
+
+    /// Mirror of ClickyViewModel.currentAudioLevel for the listening
+    /// waveform. 0…1 normalised mic power.
+    @Published var audioLevel: CGFloat = 0
+
     private let logger = Logger(subsystem: "com.proyecto26.clicky", category: "OverlayManager")
     private var windows: [OverlayWindow] = []
     private var screenParameterObserver: NSObjectProtocol?
@@ -45,7 +55,8 @@ final class OverlayManager: ObservableObject {
     /// animation. The BlueCursorView for the matching display picks
     /// it up via Combine and starts the flight.
     func flyTo(_ target: BlueCursorTarget) {
-        logger.info("Flying to target on screen frame \(String(describing: target.displayFrame), privacy: .public)")
+        let frames = windows.map { $0.frame }
+        logger.info("flyTo target=\(String(describing: target.globalLocation), privacy: .public) displayFrame=\(String(describing: target.displayFrame), privacy: .public) label=\(target.label ?? "nil", privacy: .public) windows=\(self.windows.count, privacy: .public) windowFrames=\(String(describing: frames), privacy: .public)")
         ensureWindowsVisible()
         activeTarget = target
     }
@@ -55,7 +66,9 @@ final class OverlayManager: ObservableObject {
     /// is the one that just finished, so a newly-dispatched target
     /// doesn't get overwritten.
     func clearTargetIfMatches(target screenFrame: CGRect) {
-        guard let active = activeTarget, active.displayFrame == screenFrame else { return }
+        guard let active = activeTarget,
+              active.displayFrame.origin == screenFrame.origin,
+              active.displayFrame.size == screenFrame.size else { return }
         activeTarget = nil
         // Leave windows on screen; they're transparent and cheap to
         // keep mounted. They hide visually when opacity drops to 0.
@@ -82,9 +95,15 @@ final class OverlayManager: ObservableObject {
         }
         windows = NSScreen.screens.map { screen in
             let view = BlueCursorView(screenFrame: screen.frame, manager: self)
-            return OverlayWindow(screen: screen, rootView: AnyView(view))
+            let window = OverlayWindow(screen: screen, rootView: AnyView(view))
+            // Order front immediately so the NSHostingView activates its
+            // SwiftUI subscriptions now — otherwise the first @Published
+            // activeTarget can arrive before .onReceive is wired up.
+            window.orderFrontRegardless()
+            return window
         }
-        logger.info("Rebuilt \(self.windows.count, privacy: .public) overlay window(s) for \(NSScreen.screens.count, privacy: .public) display(s)")
+        let screenFrames = NSScreen.screens.map(\.frame)
+        logger.info("Rebuilt \(self.windows.count, privacy: .public) overlay window(s) for \(NSScreen.screens.count, privacy: .public) display(s); frames=\(String(describing: screenFrames), privacy: .public)")
     }
 
     private func ensureWindowsVisible() {
