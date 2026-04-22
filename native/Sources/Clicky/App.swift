@@ -34,6 +34,25 @@ struct ClickyApp: App {
 
 // MARK: - AppDelegate
 
+// MARK: - Custom panel
+
+/// NSPanel subclass that keeps the non-activating behaviour (clicking
+/// Clicky's panel doesn't steal focus from the user's frontmost app)
+/// but overrides `canBecomeKey` so SwiftUI text fields inside the panel
+/// still receive keystrokes. Without this override, SecureField /
+/// TextField visibly accept focus but keyboard input is silently
+/// dropped — nonactivating panels never become the key window, and
+/// AppKit's text-input subsystem requires key-window status to route
+/// NSEvent.keyDown to the focused control.
+///
+/// `canBecomeMain` stays `false` so the app genuinely doesn't
+/// activate — the panel is key, but the app-level main-window state
+/// doesn't change (no dock-icon flash, no menu-bar takeover).
+final class ClickyPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let logger = Logger(subsystem: "com.proyecto26.clicky", category: "AppDelegate")
@@ -134,7 +153,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hostingView = NSHostingView(rootView: contentView)
         hostingView.frame = NSRect(x: 0, y: 0, width: 360, height: 420)
 
-        let panel = NSPanel(
+        let panel = ClickyPanel(
             contentRect: hostingView.frame,
             styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,

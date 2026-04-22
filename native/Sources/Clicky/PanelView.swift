@@ -12,6 +12,7 @@ struct PanelView: View {
     let onDismiss: () -> Void
 
     @State private var prompt: String = "what's on my screen right now?"
+    @State private var showingSettings: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -19,7 +20,9 @@ struct PanelView: View {
             Divider().background(Color.white.opacity(0.08)).padding(.horizontal, 16)
 
             Group {
-                if !viewModel.isClaudeCLIAvailable {
+                if showingSettings {
+                    SettingsView(viewModel: viewModel) { showingSettings = false }
+                } else if !viewModel.isClaudeCLIAvailable {
                     installBanner
                 } else if !viewModel.hasScreenRecordingPermission {
                     screenRecordingBanner
@@ -56,6 +59,16 @@ struct PanelView: View {
                     .foregroundColor(.white)
             }
             Spacer()
+            Button { showingSettings.toggle() } label: {
+                Image(systemName: showingSettings ? "gearshape.fill" : "gearshape")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(showingSettings ? .white : .white.opacity(0.6))
+                    .frame(width: 20, height: 20)
+                    .background(Circle().fill(Color.white.opacity(showingSettings ? 0.15 : 0.08)))
+            }
+            .buttonStyle(.plain)
+            .help("Settings")
+
             Button(action: onDismiss) {
                 Image(systemName: "xmark")
                     .font(.system(size: 10, weight: .bold))

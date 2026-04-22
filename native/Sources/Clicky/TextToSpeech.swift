@@ -18,11 +18,17 @@ import Foundation
 import os
 
 @MainActor
-final class TextToSpeech: NSObject {
+final class TextToSpeech: NSObject, ObservableObject {
     private let logger = Logger(subsystem: "com.proyecto26.clicky", category: "TextToSpeech")
-    private let elevenLabsConfig: ElevenLabsConfig?
+    @Published private(set) var elevenLabsConfig: ElevenLabsConfig?
 
     @Published private(set) var isSpeaking: Bool = false
+
+    /// Human-readable message set whenever the ElevenLabs backend
+    /// fell back to AVSpeech on the most recent turn. Cleared on
+    /// success. Surfaced in the panel so users can tell why their
+    /// premium voice didn't play without digging through os_log.
+    @Published private(set) var lastBackendError: String?
 
     // System speech path
     private let synthesizer = AVSpeechSynthesizer()
@@ -47,6 +53,18 @@ final class TextToSpeech: NSObject {
         logger.info("TTS backend: \(self.activeBackendDisplayName, privacy: .public)")
     }
 
+    /// Re-reads ElevenLabsConfig from all three sources (env, Keychain,
+    /// JSON file). Called by the Settings view after the user saves or
+    /// clears the ElevenLabs key so the new backend takes effect on the
+    /// very next turn — no relaunch required.
+    func reloadConfiguration() {
+        stop()
+        let previous = elevenLabsConfig?.voiceId
+        elevenLabsConfig = ElevenLabsConfig.load()
+        lastBackendError = nil
+        logger.info("TTS backend reloaded: \(self.activeBackendDisplayName, privacy: .public) (was voice: \(previous ?? "<system>", privacy: .public))")
+    }
+
     /// Speaks `text` and returns when playback finishes (or is cancelled
     /// via `stop()`). Concurrent calls replace the in-flight utterance.
     func speak(_ text: String) async {
@@ -58,11 +76,15 @@ final class TextToSpeech: NSObject {
         if let config = elevenLabsConfig {
             do {
                 try await speakViaElevenLabs(trimmed, config: config)
+                lastBackendError = nil
                 return
             } catch {
                 // Network / API / playback error. Don't leave the user
-                // in silence — fall back to the system voice.
-                logger.warning("ElevenLabs TTS failed, falling back to AVSpeech: \(error.localizedDescription, privacy: .public)")
+                // in silence — fall back to the system voice, and
+                // surface the reason so the panel can show a chip.
+                let description = (error as NSError).localizedDescription
+                logger.warning("ElevenLabs TTS failed, falling back to AVSpeech: \(description, privacy: .public)")
+                lastBackendError = "ElevenLabs: \(description)"
             }
         }
         await speakViaSystem(trimmed)

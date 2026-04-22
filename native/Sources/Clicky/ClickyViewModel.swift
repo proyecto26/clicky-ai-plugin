@@ -297,6 +297,23 @@ final class ClickyViewModel: ObservableObject {
         NSWorkspace.shared.open(url)
     }
 
+    // MARK: - ElevenLabs settings
+
+    /// Saves the user's ElevenLabs credentials to Keychain and hot-swaps
+    /// the TTS backend. The next reply will play through the new voice
+    /// without needing a relaunch.
+    func saveElevenLabsSettings(apiKey: String, voiceId: String?) {
+        _ = ElevenLabsConfig.saveToKeychain(apiKey: apiKey, voiceId: voiceId)
+        textToSpeech.reloadConfiguration()
+    }
+
+    /// Removes ElevenLabs credentials from Keychain. Env vars + JSON
+    /// file sources are left alone — only the Keychain slot is cleared.
+    func clearElevenLabsSettings() {
+        ElevenLabsConfig.clearKeychain()
+        textToSpeech.reloadConfiguration()
+    }
+
     // MARK: - Private
 
     private func isTCCDeclinedError(_ error: ScreenCaptureError) -> Bool {
