@@ -230,7 +230,7 @@ struct PanelView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.white)
             }
-            Text("Clicky needs Accessibility to listen for Control+Option (push-to-talk). The banner clears automatically as soon as you grant — no restart needed.")
+            Text("Clicky needs Accessibility to listen for the push-to-talk hotkey (hold Control and Option together). The banner clears automatically as soon as you grant — no restart needed.")
                 .font(.system(size: 12))
                 .foregroundColor(.white.opacity(0.75))
                 .fixedSize(horizontal: false, vertical: true)
@@ -389,18 +389,42 @@ struct PanelView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.white.opacity(0.85))
             Spacer()
-            Text("⌃⌥ to talk")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(.white.opacity(0.45))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(RoundedRectangle(cornerRadius: 4).fill(Color.white.opacity(0.08)))
+            hotkeyHint
         }
+    }
+
+    /// Key capsules that spell out the chord by name rather than relying
+    /// on the ⌃⌥ glyphs — those confuse users on non-Apple keyboards
+    /// where Option is labeled "Alt" and Control has no standard symbol.
+    private var hotkeyHint: some View {
+        HStack(spacing: 3) {
+            keyCap("Control")
+            Text("+")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(.white.opacity(0.4))
+            keyCap("Option")
+        }
+    }
+
+    private func keyCap(_ label: String) -> some View {
+        Text(label)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundColor(.white.opacity(0.65))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.white.opacity(0.10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    )
+            )
     }
 
     private var stateLabel: String {
         switch viewModel.state {
-        case .idle:      return "Ready. Hold ⌃⌥ to talk."
+        case .idle:      return "Ready. Hold Control + Option to talk."
         case .listening: return viewModel.dictationManager.partialTranscript.isEmpty
             ? "Listening…"
             : viewModel.dictationManager.partialTranscript
