@@ -1,0 +1,37 @@
+# macOS
+.DS_Store
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*~
+
+# Plugin runtime state (per-user, never committed)
+screenshots/
+downloads/
+config.local.*
+*.local.json
+last-session.json
+
+# Node / bun artifacts (we don't use them, but guard anyway)
+node_modules/
+bun.lockb
+package-lock.json
+
+# Build output
+*.js.map
+dist/
+build/
+
+# Native app build artifacts (rebuilt every make run; never commit)
+native/.build/
+native/Clicky.app/
+native/*.dmg
+native/*.dmg.sha256
+
+# Swift Package Manager local state
+native/.swiftpm/
+native/Packages/
+native/xcuserdata/
+native/DerivedData/

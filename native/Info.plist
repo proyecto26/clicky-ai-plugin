@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleDisplayName</key>
+    <string>Clicky</string>
+    <key>CFBundleExecutable</key>
+    <string>clicky</string>
+    <key>CFBundleIconFile</key>
+    <string>Clicky.icns</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.proyecto26.clicky</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Clicky</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.2</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>Clicky captures your screen so Claude can see what you're looking at and answer questions about it.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Clicky listens when you hold the push-to-talk hotkey so you can speak to Claude.</string>
+</dict>
+</plist>
