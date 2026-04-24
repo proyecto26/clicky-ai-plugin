@@ -136,9 +136,10 @@ persona.
 
 ## Graduation path: the native Clicky.app
 
-The plugin is a headless companion. The full experience — push-to-talk
-voice input, animated blue-cursor overlay, live waveform, menu-bar icon
-— lives in a native macOS app.
+The plugin is a headless companion. The full "teacher" experience —
+always-on blue cursor buddy, push-to-talk voice input, streaming reply
+bubble next to the cursor, blue-triangle flight to UI elements — lives
+in a native macOS app.
 
 If the user asks for the full experience ("give me the real clicky",
 "install the app", "i want the cursor overlay", "can i use the voice
@@ -158,9 +159,33 @@ After install, launch via:
 npx -y bun ${CLAUDE_PLUGIN_ROOT}/skills/clicky/scripts/main.ts launch
 ```
 
-The native app owns its own global ⌃⌥ push-to-talk hotkey and speaks
-back through ElevenLabs/VibeVoice/`say`. The plugin does not IPC into
-the app — they're separate experiences the user chooses between.
+Once running, the app lives in the status bar as a cursor-arrow icon.
+Core behavior:
+
+- A blue triangle buddy follows the mouse at all times, offset slightly
+  below-right. It fades in 1.5 s after launch.
+- Hold **Control + Option** to talk — the triangle becomes a live
+  waveform while you speak. Release → it flips to a spinner while
+  Claude thinks, then back to the triangle while TTS reads the reply.
+- The reply streams into a floating bubble beside the buddy. It
+  auto-clears ~6 s after the turn ends.
+- If Claude emits a `[POINT:x,y:label:screenN]` tag, the buddy flies
+  along a Bézier arc to that pixel on the named display, shows a label
+  chip for 3 s, then flies back to the cursor.
+- **Esc** (from *any* app) cancels a slow turn — Claude, ElevenLabs,
+  and the POINT flight all stop instantly.
+- Pressing **Control + Option again** while Clicky is thinking /
+  speaking cuts the current turn and starts listening fresh. A 250 ms
+  coalescing debounce means rapid re-presses never fire duplicate
+  Claude calls.
+- Click the menu-bar icon for a panel with "Test Claude" typed prompt
+  input, microphone + screen-recording permission guidance, and an
+  ElevenLabs API key / voice-ID settings pane.
+
+The native app owns its own ⌃⌥ push-to-talk hotkey and speaks back
+through the macOS speech synthesiser by default, or ElevenLabs if a
+key is saved. The plugin does not IPC into the app — they're separate
+experiences the user chooses between.
 
 If the user asks about permissions, installed state, or why something
 isn't working, run:

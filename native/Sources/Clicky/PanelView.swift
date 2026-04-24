@@ -484,6 +484,7 @@ struct PanelView: View {
                     .font(.system(size: 10))
                     .foregroundColor(.white.opacity(0.35))
             }
+            modelPicker
             Spacer()
             if let sessionId = viewModel.lastSessionId {
                 Text("session \(sessionId.prefix(8))")
@@ -500,5 +501,37 @@ struct PanelView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(Color.black.opacity(0.25))
+    }
+
+    private var modelPicker: some View {
+        Menu {
+            ForEach(ClaudeModel.allCases) { model in
+                Button {
+                    viewModel.selectedModel = model
+                } label: {
+                    HStack {
+                        Text(model.displayName)
+                        if model == viewModel.selectedModel {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(viewModel.selectedModel.displayName)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
+            }
+            .font(.system(size: 10, weight: .medium))
+            .foregroundColor(.white.opacity(0.6))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(RoundedRectangle(cornerRadius: 4).fill(Color.white.opacity(0.06)))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Select Claude model")
     }
 }

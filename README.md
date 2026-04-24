@@ -158,11 +158,31 @@ bun skills/clicky/scripts/main.ts launch
 3. Print a manual URL as a last resort.
 
 Once installed, `launch` opens the app (or you can click it from
-`/Applications/`). The native app gives you the full Clicky experience:
-global push-to-talk hotkey (`⌃⌥`), animated blue cursor overlay that
-flies to UI elements, menu-bar status. The plugin and the native app do
-not talk to each other — they're independent experiences you choose
-between.
+`/Applications/`). The native app gives you the full "teacher" Clicky
+experience:
+
+- **Always-on cursor buddy** — a blue triangle follows the mouse at
+  60 Hz with a spring animation, offset below-right of the cursor.
+- **Push-to-talk** (`⌃⌥`) — the triangle becomes a live waveform while
+  you're speaking, then a spinner while Claude thinks, then speaks the
+  reply through macOS Speech or ElevenLabs.
+- **Streaming response bubble** — Claude's reply appears in a rounded
+  bubble beside the buddy, updating as tokens stream in. Auto-fades
+  ~6 s after the turn finishes.
+- **POINT flight** — when Claude emits a `[POINT:x,y:label]` tag, the
+  buddy flies along a Bézier arc to that pixel on the correct display,
+  holds with a label chip for 3 s, then flies back to the cursor.
+- **Esc to cancel** — works from any app. Stops the Claude roundtrip,
+  halts TTS mid-sentence, kills any in-flight POINT flight, and clears
+  the bubble. A 250 ms debounce on voice dispatch means rapid re-presses
+  of `⌃⌥` always resolve to exactly one Claude call, for your most
+  recent utterance.
+- **Menu-bar panel** — status icon with a typed "Test Claude" input,
+  permission guidance, an ElevenLabs settings pane (API key + voice ID
+  stored in the macOS Keychain), and a session history clear.
+
+The plugin and the native app do not talk to each other — they're
+independent experiences you choose between.
 
 ## Voice
 

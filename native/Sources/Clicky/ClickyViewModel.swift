@@ -18,6 +18,36 @@ enum CompanionState: Equatable {
     case speaking
 }
 
+/// User-selectable Claude model. Values match the CLI's `--model` slugs.
+/// Sonnet is the default (fast, vision-capable); Opus is the opt-in
+/// heavier brain for harder reasoning turns.
+enum ClaudeModel: String, CaseIterable, Identifiable {
+    case sonnet = "claude-sonnet-4-6"
+    case opus = "claude-opus-4-6"
+
+    var id: String { rawValue }
+    var displayName: String {
+        switch self {
+        case .sonnet: return "Sonnet"
+        case .opus: return "Opus"
+        }
+    }
+
+    private static let defaultsKey = "com.proyecto26.clicky.selectedModel"
+
+    static func loadPersisted() -> ClaudeModel {
+        guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+              let model = ClaudeModel(rawValue: raw) else {
+            return .sonnet
+        }
+        return model
+    }
+
+    func persist() {
+        UserDefaults.standard.set(rawValue, forKey: Self.defaultsKey)
+    }
+}
+
 @MainActor
 final class ClickyViewModel: ObservableObject {
     // MARK: - Claude CLI + session
@@ -29,6 +59,9 @@ final class ClickyViewModel: ObservableObject {
     @Published var streamingText: String = ""
     @Published var lastError: String?
     @Published var lastSessionId: String?
+    @Published var selectedModel: ClaudeModel = ClaudeModel.loadPersisted() {
+        didSet { selectedModel.persist() }
+    }
 
     // MARK: - Screen Recording permission
 
@@ -305,7 +338,7 @@ final class ClickyViewModel: ObservableObject {
                 let result = try await runner.ask(
                     messages: [message],
                     systemPrompt: Self.systemPrompt,
-                    model: "claude-sonnet-4-6",
+                    model: selectedModel.rawValue,
                     resumeSessionId: resume
                 ) { [weak self] chunk in
                     Task { @MainActor [weak self] in
