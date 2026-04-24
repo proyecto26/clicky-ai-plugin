@@ -148,6 +148,19 @@ struct BlueCursorView: View {
                 .animation(.spring(response: 0.2, dampingFraction: 0.6, blendDuration: 0), value: cursorPosition)
                 .animation(.easeIn(duration: 0.15), value: manager.voiceState)
 
+            // Streaming response bubble — follows the buddy. Visible
+            // whenever Claude has produced any reply text AND we're not
+            // actively listening (waveform owns the cursor during
+            // push-to-talk). ClickyViewModel auto-clears the text ~6 s
+            // after the turn finishes so stale replies don't linger.
+            if buddyVisibleOnThisScreen
+                && manager.voiceState != .listening
+                && !manager.streamingResponseText.isEmpty {
+                responseBubble(manager.streamingResponseText)
+                    .offset(x: cursorPosition.x + 28, y: cursorPosition.y + 20)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
             // Label chip — only visible while the buddy is parked at a
             // POINT target. Fades/scales in, holds, then fades out.
             if mode == .pointingAtTarget, let chipText {
@@ -332,6 +345,29 @@ struct BlueCursorView: View {
     }
 
     // MARK: - Subviews
+
+    /// Floating streaming-response bubble. Rendered inside the existing
+    /// per-display overlay window (no extra NSPanel needed) so it shares
+    /// the buddy's cursor-tracking timer + window frame.
+    private func responseBubble(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 13))
+            .foregroundColor(.white)
+            .lineSpacing(3)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: 300, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.black.opacity(0.85))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 0.8)
+                    )
+                    .shadow(color: Color.black.opacity(0.35), radius: 16, y: 8)
+            )
+    }
 
     private func labelChip(_ text: String) -> some View {
         Text(text)

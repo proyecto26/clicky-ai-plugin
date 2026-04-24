@@ -36,6 +36,13 @@ final class OverlayManager: ObservableObject {
     /// waveform. 0…1 normalised mic power.
     @Published var audioLevel: CGFloat = 0
 
+    /// Mirror of ClickyViewModel.streamingText (the POINT-stripped reply
+    /// text). Empty string means no bubble; otherwise each BlueCursorView
+    /// on the cursor's / target's display renders a floating bubble
+    /// beside the buddy. ClickyViewModel is responsible for clearing
+    /// this after the auto-hide window so stale replies don't linger.
+    @Published var streamingResponseText: String = ""
+
     private let logger = Logger(subsystem: "com.proyecto26.clicky", category: "OverlayManager")
     private var windows: [OverlayWindow] = []
     private var screenParameterObserver: NSObjectProtocol?
@@ -59,6 +66,14 @@ final class OverlayManager: ObservableObject {
         logger.info("flyTo target=\(String(describing: target.globalLocation), privacy: .public) displayFrame=\(String(describing: target.displayFrame), privacy: .public) label=\(target.label ?? "nil", privacy: .public) windows=\(self.windows.count, privacy: .public) windowFrames=\(String(describing: frames), privacy: .public)")
         ensureWindowsVisible()
         activeTarget = target
+    }
+
+    /// Unconditionally drops the current POINT target + clears the
+    /// response bubble. Used by ClickyViewModel.cancelCurrentTurn so
+    /// an interrupted turn leaves zero residue on screen.
+    func reset() {
+        activeTarget = nil
+        streamingResponseText = ""
     }
 
     /// Called by a BlueCursorView when it finishes its fly-back-to-

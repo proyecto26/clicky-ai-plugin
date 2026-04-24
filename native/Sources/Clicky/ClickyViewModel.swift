@@ -47,7 +47,6 @@ final class ClickyViewModel: ObservableObject {
     @Published var hasAccessibilityPermission: Bool
     @Published var state: CompanionState = .idle
     @Published var currentAudioLevel: CGFloat = 0
-    @Published var lastPointTag: PointTag? = nil
     @Published var dictationPermissionProblem: DictationPermissionProblem? = nil
 
     // MARK: - Private
@@ -61,6 +60,11 @@ final class ClickyViewModel: ObservableObject {
     /// so a cancelled turn can't stomp on the state that `cancelCurrentTurn`
     /// (or the new turn the user kicked off) already wrote.
     private var turnGeneration: Int = 0
+    /// Pending transcript → runTurn dispatch. Introduces a small
+    /// coalesce window so rapid press-release-press-release cycles
+    /// don't fire multiple Claude calls back-to-back; only the last
+    /// transcript actually hits the CLI.
+    private var pendingDispatch: Task<Void, Never>?
     private var observations: Set<AnyCancellable> = []
 
     init() {
@@ -114,6 +118,10 @@ final class ClickyViewModel: ObservableObject {
         $currentAudioLevel
             .receive(on: DispatchQueue.main)
             .sink { [weak self] level in self?.overlayManager.audioLevel = level }
+            .store(in: &observations)
+        $streamingText
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] text in self?.overlayManager.streamingResponseText = text }
             .store(in: &observations)
 
         if !hasScreenRecordingPermission {
@@ -202,7 +210,6 @@ final class ClickyViewModel: ObservableObject {
         state = .listening
         lastError = nil
         streamingText = ""
-        lastPointTag = nil
         Task { @MainActor in
             await dictationManager.startListening { [weak self] transcript in
                 self?.runTurnFromVoice(userPrompt: transcript)
@@ -218,7 +225,31 @@ final class ClickyViewModel: ObservableObject {
     }
 
     private func runTurnFromVoice(userPrompt: String) {
-        runTurn(userPrompt: userPrompt, thenSpeak: true)
+        // Debounce: drop any previously-queued dispatch, then wait
+        // 250 ms before hitting Claude. If the user re-presses within
+        // that window, cancelCurrentTurn will kill this pending task
+        // and startListening fresh — no wasted Claude call for the
+        // discarded transcript.
+        pendingDispatch?.cancel()
+        pendingDispatch = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            guard let self, !Task.isCancelled else { return }
+            self.pendingDispatch = nil
+            self.runTurn(userPrompt: userPrompt, thenSpeak: true)
+        }
+    }
+
+    /// Wipe `streamingText` ~6 s after a turn ends successfully, so the
+    /// cursor-adjacent reply bubble fades on its own if the user doesn't
+    /// start another turn. Guarded by the turn generation — if the user
+    /// cancels or kicks off a new turn before the timer fires, this
+    /// scheduled clear is skipped so it doesn't wipe fresh text.
+    private func scheduleResponseFade(for generation: Int) {
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 6_000_000_000)
+            guard let self, self.turnGeneration == generation else { return }
+            self.streamingText = ""
+        }
     }
 
     // MARK: - Turn execution
@@ -235,7 +266,6 @@ final class ClickyViewModel: ObservableObject {
         state = thenSpeak ? .thinking : state
         streamingText = ""
         lastError = nil
-        lastPointTag = nil
 
         currentTask = Task { @MainActor in
             defer {
@@ -290,17 +320,26 @@ final class ClickyViewModel: ObservableObject {
 
                 // Parse POINT tag + strip it before TTS.
                 let parsed = PointTagParser.parse(result.text)
-                lastPointTag = parsed.point
                 streamingText = parsed.spokenText
 
                 // Map the tag's screenshot-pixel coords to a global
                 // AppKit CGPoint using the freshly-captured manifest.
                 let mapped = PointCoordinateMapper.map(point: parsed.point, manifest: manifest)
 
+                // Between every awaited step below, re-check the turn
+                // generation. A cancelled turn must not go on to speak
+                // or fly — textToSpeech.stop() resumes speak()'s
+                // continuation normally (no CancellationError), so
+                // without these guards the task falls through and
+                // Esc / Control-Option-retry produces stale audio.
+                guard self.turnGeneration == thisTurn, !Task.isCancelled else { return }
+
                 if thenSpeak {
                     state = .speaking
                     await textToSpeech.speak(parsed.spokenText)
                 }
+
+                guard self.turnGeneration == thisTurn, !Task.isCancelled else { return }
 
                 // Fire the overlay AFTER TTS so the user hears
                 // "look at the save button" *before* the cursor moves —
@@ -315,6 +354,7 @@ final class ClickyViewModel: ObservableObject {
 
                 if self.turnGeneration == thisTurn {
                     state = .idle
+                    scheduleResponseFade(for: thisTurn)
                 }
             } catch is CancellationError {
                 // cancelCurrentTurn already wrote state (and may have
@@ -355,11 +395,14 @@ final class ClickyViewModel: ObservableObject {
     func cancelCurrentTurn() {
         currentTask?.cancel()
         currentTask = nil
+        pendingDispatch?.cancel()
+        pendingDispatch = nil
         // Bump the generation so the cancelled task's defer/catch blocks
         // see they're no longer current and skip their state mutations.
         turnGeneration += 1
         textToSpeech.stop()
         dictationManager.cancelListening()
+        overlayManager.reset()
         isRunningTurn = false
         streamingText = ""
         lastError = nil
@@ -371,7 +414,6 @@ final class ClickyViewModel: ObservableObject {
         lastSessionId = nil
         streamingText = ""
         lastError = nil
-        lastPointTag = nil
     }
 
     func openClaudeCodeInstallPage() {

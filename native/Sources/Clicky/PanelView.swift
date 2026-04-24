@@ -315,9 +315,6 @@ struct PanelView: View {
             if viewModel.state == .listening {
                 waveformBar
             }
-            if let tag = viewModel.lastPointTag {
-                pointTagRow(tag)
-            }
 
             TextField("", text: $prompt, axis: .vertical)
                 .textFieldStyle(.plain)
@@ -353,6 +350,7 @@ struct PanelView: View {
                             .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.08)))
                     }
                     .buttonStyle(.plain)
+                    .help("Cancel current turn (Esc)")
                 }
 
                 Spacer()
@@ -473,23 +471,6 @@ struct PanelView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: 32)
         .animation(.easeOut(duration: 0.1), value: viewModel.currentAudioLevel)
-    }
-
-    private func pointTagRow(_ tag: PointTag) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "target")
-                .font(.system(size: 10))
-                .foregroundColor(.blue.opacity(0.9))
-            Text(tag.label ?? "unlabeled element")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.white.opacity(0.85))
-            Text("(\(Int(tag.x)), \(Int(tag.y)))\(tag.screen.map { " screen \($0)" } ?? "")")
-                .font(.system(size: 10))
-                .foregroundColor(.white.opacity(0.45))
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(RoundedRectangle(cornerRadius: 4).fill(Color.blue.opacity(0.12)))
     }
 
     private var footer: some View {

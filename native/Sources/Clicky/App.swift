@@ -59,11 +59,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var panel: NSPanel?
     private var outsideClickMonitor: Any?
+    private var keyEventMonitor: Any?
+    private var globalKeyEventMonitor: Any?
     private let viewModel = ClickyViewModel()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         installStatusItem()
+        // Global Esc monitor lives for the whole app lifetime so a
+        // turn can be cancelled even after the panel auto-dismissed
+        // (common case: kicked off a turn, clicked out, Clicky still
+        // thinking / speaking). Piggybacks on Accessibility, already
+        // granted for the push-to-talk CGEvent tap.
+        installGlobalEscapeMonitor()
         Task { await viewModel.refreshClaudeCLIStatus() }
     }
 
@@ -120,6 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         positionPanelUnderStatusItem(panel)
         panel.makeKeyAndOrderFront(nil)
         installOutsideClickMonitor()
+        installKeyEventMonitor()
         Task { await viewModel.refreshClaudeCLIStatus() }
     }
 
@@ -141,9 +150,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Local Esc monitor — installed only while the panel is open.
+    /// Catches Esc when the panel has key focus (user typing in the
+    /// prompt field) and swallows the event so it doesn't leak to
+    /// other windows. The *global* counterpart handles the more
+    /// common case (panel closed, Clicky still processing).
+    private func installKeyEventMonitor() {
+        if keyEventMonitor != nil { return }
+        keyEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+            guard let self else { return event }
+            guard event.keyCode == 53 else { return event }
+            self.handleEscapePress()
+            return nil
+        }
+    }
+
+    private func removeKeyEventMonitor() {
+        if let monitor = keyEventMonitor {
+            NSEvent.removeMonitor(monitor)
+            keyEventMonitor = nil
+        }
+    }
+
+    /// Global Esc monitor — installed once at launch for the app
+    /// lifetime. Fires regardless of which app is frontmost, which
+    /// is essential because Clicky's non-activating panel never
+    /// makes the app active. Piggybacks on the Accessibility grant
+    /// already used by the push-to-talk CGEvent tap. Can't swallow
+    /// events (by OS design), but Esc in other apps is harmless.
+    private func installGlobalEscapeMonitor() {
+        if globalKeyEventMonitor != nil { return }
+        globalKeyEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+            guard event.keyCode == 53 else { return }
+            Task { @MainActor [weak self] in
+                self?.handleEscapePress()
+            }
+        }
+    }
+
+    private func handleEscapePress() {
+        if viewModel.isRunningTurn || viewModel.state != .idle {
+            logger.info("Esc pressed — cancelling turn")
+            viewModel.cancelCurrentTurn()
+        } else if panel?.isVisible == true {
+            dismissPanel()
+        }
+    }
+
     private func dismissPanel() {
         panel?.orderOut(nil)
         removeOutsideClickMonitor()
+        removeKeyEventMonitor()
     }
 
     private func makePanel() -> NSPanel {
