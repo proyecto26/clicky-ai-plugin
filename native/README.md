@@ -1,6 +1,6 @@
-# Clicky — native macOS companion
+# OpenClicky — native macOS companion
 
-The native macOS app that backs `clicky-ai-plugin`'s `install` /
+The native macOS app that backs `openclicky`'s `install` /
 `launch` subcommands. Built from pure SwiftPM + `codesign` with no
 Xcode GUI required — just `make build` and go.
 
@@ -32,10 +32,10 @@ macOS tools only.
 ## Build & run
 
 ```bash
-# inside clicky-ai-plugin/native/
-make build   # release build, wrap into Clicky.app, adhoc-sign
+# inside openclicky/native/
+make build   # release build, wrap into OpenClicky.app, adhoc-sign
 make run     # build + launch
-make clean   # remove .build, Clicky.app, DMGs
+make clean   # remove .build, OpenClicky.app, DMGs
 
 # produce a distributable DMG (adhoc-signed; notarization is CI-only)
 make dmg
@@ -50,16 +50,16 @@ Grant it, reopen the panel, type a question, hit **Test Claude**.
 native/
 ├── Package.swift                 # SwiftPM manifest (macOS 14+, single exe)
 ├── Info.plist                    # LSUIElement, usage descriptions, bundle id
-├── Clicky.entitlements           # sandbox=off (needs Process.run), mic + screencap
+├── OpenClicky.entitlements           # sandbox=off (needs Process.run), mic + screencap
 ├── Makefile                      # build / run / bundle / dmg / clean
 ├── README.md
-└── Sources/Clicky/
+└── Sources/OpenClicky/
     ├── App.swift                 # @main + AppDelegate + NSStatusItem + NSPanel
-    ├── ClickyViewModel.swift     # panel state, CLI probe, turn runner
+    ├── OpenClickyViewModel.swift     # panel state, CLI probe, turn runner
     ├── PanelView.swift           # SwiftUI panel content + install banner
     ├── ScreenCapture.swift       # ScreenCaptureKit → JPEG + dims
     ├── ClaudeCLIRunner.swift     # spawn `claude` + stream-json I/O
-    └── SessionPersistence.swift  # ~/Library/Application Support/Clicky/last-session.json
+    └── SessionPersistence.swift  # ~/Library/Application Support/OpenClicky/last-session.json
 ```
 
 ## How the Claude call works
@@ -71,7 +71,7 @@ claude --print --verbose
   --output-format stream-json --input-format stream-json
   --include-partial-messages
   --model claude-sonnet-4-6
-  --system-prompt "<clicky persona>"
+  --system-prompt "<openclicky persona>"
   --setting-sources ""
   --disable-slash-commands
   --strict-mcp-config --mcp-config '{"mcpServers":{}}'
@@ -87,7 +87,7 @@ the user's CLAUDE.md, MCP servers, hooks, skills, and auto-memory so
 spawn time is ~2 s and input tokens stay around 2 k.
 
 On success, the app reads `session_id` from the init event and saves
-it to `~/Library/Application Support/Clicky/last-session.json`. Next
+it to `~/Library/Application Support/OpenClicky/last-session.json`. Next
 launch resumes that session via `--resume`.
 
 ## Troubleshooting
@@ -100,7 +100,7 @@ launch resumes that session via `--resume`.
 - **"Not logged in".** Run `claude` once in a terminal to sign in, then
   relaunch the app.
 - **Screen Recording permission denied.** Open `System Settings →
-  Privacy & Security → Screen Recording`, enable Clicky, restart the app.
+  Privacy & Security → Screen Recording`, enable OpenClicky, restart the app.
 
 ## License
 

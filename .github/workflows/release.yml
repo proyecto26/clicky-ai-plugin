@@ -197,9 +197,9 @@ jobs:
           SHA256:  ${{ needs.build.outputs.sha256 }}
         run: |
           set -euo pipefail
-          FORMULA="tap/Casks/clicky-ai.rb"
+          FORMULA="tap/Casks/openclicky.rb"
           if [ ! -f "$FORMULA" ]; then
-            echo "Formula missing at $FORMULA — seed it from clicky-ai-plugin/casks/clicky-ai.rb first."
+            echo "Formula missing at $FORMULA — seed it from openclicky/casks/openclicky.rb first."
             exit 1
           fi
           sed -E -i '' \
@@ -207,7 +207,7 @@ jobs:
             -e "s|^( *sha256 *\").*(\")|\1${SHA256}\2|" \
             "$FORMULA" || python3 -c "
 import re, sys
-p = 'tap/Casks/clicky-ai.rb'
+p = 'tap/Casks/openclicky.rb'
 s = open(p).read()
 s = re.sub(r'(version\\s+\")[^\"]+(\")', r'\\g<1>${VERSION}\\g<2>', s)
 s = re.sub(r'(sha256\\s+\")[^\"]+(\")', r'\\g<1>${SHA256}\\g<2>', s)
@@ -216,10 +216,10 @@ open(p,'w').write(s)
           cd tap
           git config user.name  'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          BRANCH="clicky-ai-$VERSION"
+          BRANCH="openclicky-$VERSION"
           git checkout -b "$BRANCH"
-          git add Casks/clicky-ai.rb
-          git commit -m "clicky-ai $VERSION"
+          git add Casks/openclicky.rb
+          git commit -m "openclicky $VERSION"
           git push --set-upstream origin "$BRANCH"
 
       - name: Open PR
@@ -229,5 +229,5 @@ open(p,'w').write(s)
         run: |
           cd tap
           gh pr create --fill \
-            --title "clicky-ai $VERSION" \
-            --body "Automated bump from proyecto26/clicky-ai-plugin release."
+            --title "openclicky $VERSION" \
+            --body "Automated bump from proyecto26/openclicky release."

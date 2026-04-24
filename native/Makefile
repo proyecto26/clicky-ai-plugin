@@ -1,4 +1,4 @@
-# Clicky — CLI-only build + bundle + sign pipeline.
+# OpenClicky — CLI-only build + bundle + sign pipeline.
 #
 # Signing strategy (per Apple DTS forum 730043 — stable identity ends
 # TCC thrash). In priority order, `make build` auto-picks the best
@@ -19,20 +19,20 @@
 # Targets:
 #   make build        → build + bundle + sign (best available identity)
 #   make run          → build + launch
-#   make install      → build + copy to /Applications/Clicky.app + launch
-#   make dmg          → build + create Clicky-<version>-arm64.dmg + sha256
+#   make install      → build + copy to /Applications/OpenClicky.app + launch
+#   make dmg          → build + create OpenClicky-<version>-arm64.dmg + sha256
 #   make doctor       → dump designated requirement so you can confirm
 #                       TCC-stability across rebuilds
-#   make reset-tcc    → nuclear option: wipe Clicky's TCC grants so the
+#   make reset-tcc    → nuclear option: wipe OpenClicky's TCC grants so the
 #                       next launch re-prompts with the new identity
 #   make clean        → delete build artefacts
 #
 # Notarization happens in CI (see .github/workflows/release.yml) — local
 # developer builds never notarize.
 
-APP_NAME    := Clicky
-EXEC        := clicky
-BUNDLE_ID   := com.proyecto26.clicky
+APP_NAME    := OpenClicky
+EXEC        := openclicky
+BUNDLE_ID   := com.proyecto26.openclicky
 VERSION     := 0.1.0
 ARCH        := arm64
 
@@ -68,7 +68,7 @@ bundle:
 	mkdir -p $(APP_MACOS) $(APP_RES)
 	cp $(BUILD_DIR)/$(APP_NAME) $(APP_MACOS)/$(EXEC)
 	cp Info.plist $(APP_ROOT)/Info.plist
-	cp Resources/Clicky.icns $(APP_RES)/Clicky.icns
+	cp Resources/OpenClicky.icns $(APP_RES)/OpenClicky.icns
 	@if [ "$(SIGN_IDENTITY)" = "-" ]; then \
 		echo "==> codesign: AD-HOC (TCC will re-prompt on every rebuild)"; \
 		echo "    Tip: sign into Xcode with an Apple ID (free), then rebuild"; \
@@ -78,7 +78,7 @@ bundle:
 	fi
 	codesign --force --sign "$(SIGN_IDENTITY)" \
 		--identifier $(BUNDLE_ID) \
-		--entitlements Clicky.entitlements \
+		--entitlements OpenClicky.entitlements \
 		--options runtime --timestamp=none \
 		$(APP_BUNDLE)
 	@echo "==> built $(APP_BUNDLE)"
@@ -117,7 +117,7 @@ doctor:
 	@echo "==> available codesigning identities on this machine:"
 	@security find-identity -v -p codesigning 2>/dev/null | grep -E 'Apple Development|Developer ID' || echo "  (none — only ad-hoc available)"
 
-# Nuclear option: wipe Clicky's TCC grants so the next launch re-prompts.
+# Nuclear option: wipe OpenClicky's TCC grants so the next launch re-prompts.
 # Use this ONLY after knowingly changing signing identity (e.g. you just
 # signed into Xcode with an Apple ID and swapped ad-hoc → Apple Development).
 reset-tcc:
@@ -126,7 +126,7 @@ reset-tcc:
 	- tccutil reset Accessibility $(BUNDLE_ID)
 	- tccutil reset Microphone    $(BUNDLE_ID)
 	- tccutil reset AppleEvents   $(BUNDLE_ID)
-	@echo "==> done. relaunch Clicky to re-grant with the new identity."
+	@echo "==> done. relaunch OpenClicky to re-grant with the new identity."
 
 clean:
 	rm -rf .build $(APP_BUNDLE) $(DMG_NAME) $(DMG_NAME).sha256

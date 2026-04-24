@@ -1,4 +1,4 @@
-# clicky-ai-plugin
+# OpenClicky
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-Plugin-blueviolet)](https://code.claude.com/docs/en/plugins)
@@ -32,10 +32,10 @@ skill directly into your Claude Code setup:
 
 ```bash
 # Install the skill
-npx skills add proyecto26/clicky-ai-plugin
+npx skills add proyecto26/openclicky
 
 # List what's inside the package
-npx skills add proyecto26/clicky-ai-plugin --list
+npx skills add proyecto26/openclicky --list
 ```
 
 This drops the skill into your `.claude/skills/` directory.
@@ -46,10 +46,10 @@ Install via Claude Code's built-in plugin system:
 
 ```bash
 # Add the marketplace
-/plugin marketplace add proyecto26/clicky-ai-plugin
+/plugin marketplace add proyecto26/openclicky
 
 # Install the plugin
-/plugin install clicky-ai
+/plugin install openclicky
 ```
 
 #### Option 3: Clone and Copy
@@ -58,8 +58,8 @@ Clone the repo and copy the skills folder into your project's Claude
 config:
 
 ```bash
-git clone https://github.com/proyecto26/clicky-ai-plugin.git
-cp -r clicky-ai-plugin/skills/* .claude/skills/
+git clone https://github.com/proyecto26/openclicky.git
+cp -r openclicky/skills/* .claude/skills/
 ```
 
 #### Option 4: Git Submodule
@@ -67,10 +67,10 @@ cp -r clicky-ai-plugin/skills/* .claude/skills/
 Add as a submodule for easy updates:
 
 ```bash
-git submodule add https://github.com/proyecto26/clicky-ai-plugin.git .claude/clicky-ai-plugin
+git submodule add https://github.com/proyecto26/openclicky.git .claude/openclicky
 ```
 
-Then reference skills from `.claude/clicky-ai-plugin/skills/`.
+Then reference skills from `.claude/openclicky/skills/`.
 
 #### Option 5: Fork and Customize
 
@@ -96,7 +96,7 @@ Then reference skills from `.claude/clicky-ai-plugin/skills/`.
 
 Just talk to Claude:
 
-> *"clicky, what's on my screen?"*
+> *"openopenclicky, what's on my screen?"*
 
 The skill captures every connected display, reads the JPEGs, replies in
 a sentence or two, and optionally appends a `[POINT:x,y:label:screenN]`
@@ -106,10 +106,10 @@ tag flagging a relevant UI element.
 
 ## What you get
 
-- **A skill** (`skills/clicky/SKILL.md`) that loads when you say
-  "clicky", ask "what's on my screen", request "point at the save
+- **A skill** (`skills/openclicky/SKILL.md`) that loads when you say
+  "openclicky", ask "what's on my screen", request "point at the save
   button", etc.
-- **A CLI dispatcher** (`skills/clicky/scripts/main.ts`) with six
+- **A CLI dispatcher** (`skills/openclicky/scripts/main.ts`) with six
   subcommands that the skill tells Claude to invoke via Bash:
 
   | Subcommand | What it does |
@@ -127,7 +127,7 @@ tag flagging a relevant UI element.
 
 Just talk to Claude:
 
-> **You:** clicky, what's on my screen?
+> **You:** openclicky, what's on my screen?
 >
 > **Claude:** *(invokes capture, reads the manifest, replies)* looks
 > like you're in figma with the components panel on the left. that
@@ -138,22 +138,22 @@ Just talk to Claude:
 
 ```bash
 # All subcommands are directly runnable:
-bun skills/clicky/scripts/main.ts help
-bun skills/clicky/scripts/main.ts status --json
-bun skills/clicky/scripts/main.ts capture
-bun skills/clicky/scripts/main.ts point --x 1100 --y 42 --label "color inspector"
-bun skills/clicky/scripts/main.ts speak "hello from clicky"
-bun skills/clicky/scripts/main.ts install --dry-run
-bun skills/clicky/scripts/main.ts launch
+bun skills/openclicky/scripts/main.ts help
+bun skills/openclicky/scripts/main.ts status --json
+bun skills/openclicky/scripts/main.ts capture
+bun skills/openclicky/scripts/main.ts point --x 1100 --y 42 --label "color inspector"
+bun skills/openclicky/scripts/main.ts speak "hello from openclicky"
+bun skills/openclicky/scripts/main.ts install --dry-run
+bun skills/openclicky/scripts/main.ts launch
 ```
 
 ## The native app upgrade path
 
 `install` tries, in order:
 
-1. `brew install proyecto26/tap/clicky-ai` (preferred).
+1. `brew install proyecto26/tap/openclicky` (preferred).
 2. Download the latest signed DMG from
-   [github.com/proyecto26/clicky/releases](https://github.com/proyecto26/clicky/releases),
+   [github.com/proyecto26/openclicky/releases](https://github.com/proyecto26/openclicky/releases),
    verify SHA256, mount, copy `.app` into `/Applications/`.
 3. Print a manual URL as a last resort.
 
@@ -195,8 +195,8 @@ Run VibeVoice yourself from its
 plugin at it:
 
 ```bash
-export CLICKY_VIBEVOICE_URL=http://localhost:3000
-export CLICKY_VIBEVOICE_SPEAKER=Carter   # optional, default Carter
+export OPENCLICKY_VIBEVOICE_URL=http://localhost:3000
+export OPENCLICKY_VIBEVOICE_SPEAKER=Carter   # optional, default Carter
 ```
 
 If the server is unreachable the plugin falls back to `say` with a
@@ -205,8 +205,8 @@ one-line warning.
 ### ElevenLabs (paid, your own key)
 
 ```bash
-export CLICKY_ELEVENLABS_API_KEY=sk-...
-export CLICKY_ELEVENLABS_VOICE_ID=kPzsL2i3teMYv0FxEYQ6   # optional
+export OPENCLICKY_ELEVENLABS_API_KEY=sk-...
+export OPENCLICKY_ELEVENLABS_VOICE_ID=kPzsL2i3teMYv0FxEYQ6   # optional
 ```
 
 The plugin never ships, bundles, or exfiltrates any API key.
@@ -215,17 +215,17 @@ The plugin never ships, bundles, or exfiltrates any API key.
 
 | Variable | Effect |
 |---|---|
-| `CLICKY_DATA_DIR` | Override state dir (default `~/Library/Application Support/clicky-ai/`) |
-| `CLICKY_APP_PATH` | Explicit path to an installed `Clicky.app` |
-| `CLICKY_VIBEVOICE_URL` | Local VibeVoice HTTP server URL |
-| `CLICKY_VIBEVOICE_SPEAKER` | VibeVoice speaker name |
-| `CLICKY_ELEVENLABS_API_KEY` | User-supplied ElevenLabs key |
-| `CLICKY_ELEVENLABS_VOICE_ID` | ElevenLabs voice ID |
+| `OPENCLICKY_DATA_DIR` | Override state dir (default `~/Library/Application Support/openclicky/`) |
+| `OPENCLICKY_APP_PATH` | Explicit path to an installed `Clicky.app` |
+| `OPENCLICKY_VIBEVOICE_URL` | Local VibeVoice HTTP server URL |
+| `OPENCLICKY_VIBEVOICE_SPEAKER` | VibeVoice speaker name |
+| `OPENCLICKY_ELEVENLABS_API_KEY` | User-supplied ElevenLabs key |
+| `OPENCLICKY_ELEVENLABS_VOICE_ID` | ElevenLabs voice ID |
 
-State written under `$CLICKY_DATA_DIR`:
+State written under `$OPENCLICKY_DATA_DIR`:
 
 ```
-clicky-ai/
+openclicky/
 ├── screenshots/       # multi-display JPEGs emitted by `capture`
 ├── downloads/         # DMGs downloaded by `install` (kept for inspection)
 └── config.json        # future: plugin config
@@ -237,12 +237,12 @@ clicky-ai/
   Screen Recording permission isn't granted. Grant it to the terminal
   that runs `bun`, then re-run.
 - **`install` reports "brew available → brew install failed"** — the
-  cask `proyecto26/tap/clicky-ai` isn't published yet (or the tap isn't
+  cask `proyecto26/tap/openclicky` isn't published yet (or the tap isn't
   tapped). The script automatically falls back to the DMG download.
 - **`status` says `claudeCLI.installed: false`** — the `claude` binary
   isn't in `$PATH`. Install it from
   [claude.com/claude-code](https://claude.com/claude-code).
-- **`/clicky … ` doesn't trigger the skill** — make sure the plugin is
+- **`/openclicky … ` doesn't trigger the skill** — make sure the plugin is
   loaded. Run `claude --debug` to see skill discovery logs, or add the
   plugin via `--plugin-dir`.
 
@@ -257,7 +257,7 @@ clicky-ai/
 - **No LLM calls from the plugin** — the host Claude Code session is
   the LLM. Plugin scripts are pure tool invocations.
 
-See `docs/specs/clicky-ai-plugin.md` for the full spec and
+See `docs/specs/openclicky.md` for the full spec and
 `docs/plan/implementation-plan.md` for milestones + dependencies.
 
 ## License

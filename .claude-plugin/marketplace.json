@@ -1,13 +1,13 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "clicky-ai-marketplace",
+  "name": "openclicky-marketplace",
   "owner": {
     "name": "Proyecto 26",
     "url": "https://github.com/proyecto26"
   },
   "plugins": [
     {
-      "name": "clicky-ai",
+      "name": "openclicky",
       "source": "./"
     }
   ]

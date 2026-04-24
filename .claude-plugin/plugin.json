@@ -1,13 +1,13 @@
 {
-  "name": "clicky-ai",
+  "name": "openclicky",
   "version": "0.1.0",
   "description": "Clicky — a friendly, screen-aware Claude Code companion for macOS. Short conversational replies, multi-display screenshots, cursor-pointing protocol, optional native app integration. Say \"clicky, what's on my screen?\" or run /clicky to invoke.",
   "author": {
     "name": "Proyecto 26",
     "url": "https://github.com/proyecto26"
   },
-  "repository": "https://github.com/proyecto26/clicky-ai-plugin",
-  "homepage": "https://github.com/proyecto26/clicky-ai-plugin",
+  "repository": "https://github.com/proyecto26/openclicky",
+  "homepage": "https://github.com/proyecto26/openclicky",
   "license": "MIT",
   "keywords": [
     "clicky",

@@ -12,7 +12,7 @@ anywhere in the product?
 ### Track A — `clicky-ai-plugin` (Claude Code plugin, ships first)
 
 A lean plugin that (a) teaches Claude the Clicky persona + POINT protocol
-via a single `skills/clicky/SKILL.md`, and (b) ships a bun/TypeScript
+via a single `skills/openclicky/SKILL.md`, and (b) ships a bun/TypeScript
 dispatcher (`scripts/main.ts`) with zero npm dependencies. Structure,
 invocation pattern, and runtime ethos copy
 `/Users/jdnichollsc/dev/ai/notebooklm-ai-plugin` verbatim:
@@ -94,7 +94,7 @@ is retired; all three secrets (`ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`,
 **Track A — IN:**
 
 - `.claude-plugin/{plugin.json, marketplace.json}`
-- `skills/clicky/SKILL.md` (persona, POINT protocol, when/how to call
+- `skills/openclicky/SKILL.md` (persona, POINT protocol, when/how to call
   scripts, ~300–400 lines, self-contained)
 - `scripts/{main.ts, paths.ts, types.ts, installer.ts, launch-app.ts,
   screenshot.ts, point.ts, speak.ts}`

@@ -131,7 +131,7 @@ the live task tracker.
 - Scope: XS
 - Files:
   `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`,
-  `.gitignore`, `skills/clicky/`, `scripts/` dirs, empty `LICENSE`,
+  `.gitignore`, `skills/openclicky/`, `scripts/` dirs, empty `LICENSE`,
   empty `README.md`.
 - Acceptance:
   - `plugin.json` includes `name=clicky-ai`, `version=0.1.0`,
@@ -139,7 +139,7 @@ the live task tracker.
   - `marketplace.json` points `$schema` at the public schema URL and
     lists this plugin.
 - Verify: `ls -la .claude-plugin/` shows both files; `jq . plugin.json`
-  succeeds; `test -d skills/clicky/scripts`.
+  succeeds; `test -d skills/openclicky/scripts`.
 
 #### Task #2 — Foundation modules (paths, types, args)
 
@@ -189,7 +189,7 @@ the live task tracker.
 #### Task #8 — SKILL.md
 
 - Scope: M (single large markdown file)
-- Files: `skills/clicky/SKILL.md`.
+- Files: `skills/openclicky/SKILL.md`.
 - Acceptance:
   - Frontmatter with `name=clicky` and a 3rd-person description
     containing the trigger phrases "clicky", "show me where",
