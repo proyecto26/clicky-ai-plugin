@@ -65,6 +65,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+
+        // `--smoke-test` runs the headless self-check, prints a JSON
+        // report to stdout, and exits. CI uses this to confirm the
+        // built binary launches and can talk to the system without
+        // bringing up the full menu-bar UI.
+        if CommandLine.arguments.contains("--smoke-test") {
+            Task { @MainActor in
+                let code = await SmokeTest.run()
+                exit(code)
+            }
+            return
+        }
+
         installStatusItem()
         // Global Esc monitor lives for the whole app lifetime so a
         // turn can be cancelled even after the panel auto-dismissed

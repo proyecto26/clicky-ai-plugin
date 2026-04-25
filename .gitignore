@@ -35,3 +35,8 @@ native/.swiftpm/
 native/Packages/
 native/xcuserdata/
 native/DerivedData/
+# Swift build artifacts (native app)
+native/.build/
+native/OpenClicky.app/
+native/*.dmg
+native/*.dmg.sha256
