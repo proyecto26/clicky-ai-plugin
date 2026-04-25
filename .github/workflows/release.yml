@@ -1,9 +1,9 @@
-name: Release Clicky.app
+name: Release OpenClicky.app
 
 # Triggers on any tag matching v*  e.g. v0.1.0, v0.2.3, v1.0.0-rc.1
 # Produces a GitHub Release with:
-#   Clicky-<version>-arm64.dmg
-#   Clicky-<version>-arm64.dmg.sha256
+#   OpenClicky-<version>-arm64.dmg
+#   OpenClicky-<version>-arm64.dmg.sha256
 #
 # Requires these repository secrets (Settings → Secrets and variables
 # → Actions). If they're missing the job builds the DMG but leaves it
@@ -60,7 +60,7 @@ jobs:
             echo "refusing to release without a version"; exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "dmg_name=Clicky-$VERSION-arm64.dmg" >> "$GITHUB_OUTPUT"
+          echo "dmg_name=OpenClicky-$VERSION-arm64.dmg" >> "$GITHUB_OUTPUT"
 
       - name: Print toolchain
         run: |
@@ -119,15 +119,15 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
-          ZIP="$RUNNER_TEMP/Clicky.zip"
-          /usr/bin/ditto -c -k --keepParent Clicky.app "$ZIP"
+          ZIP="$RUNNER_TEMP/OpenClicky.zip"
+          /usr/bin/ditto -c -k --keepParent OpenClicky.app "$ZIP"
           xcrun notarytool submit "$ZIP" \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_APP_PASSWORD" \
             --team-id  "$APPLE_TEAM_ID" \
             --wait
-          xcrun stapler staple Clicky.app
-          spctl --assess --type execute --verbose=4 Clicky.app || true
+          xcrun stapler staple OpenClicky.app
+          spctl --assess --type execute --verbose=4 OpenClicky.app || true
 
       - name: Build DMG + SHA256
         working-directory: native
@@ -174,7 +174,7 @@ jobs:
           VERSION="${{ needs.build.outputs.version }}"
           DMG="${{ needs.build.outputs.dmg_name }}"
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "Clicky $VERSION" --notes "Automated release. See docs/plan/ for change audit."
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "OpenClicky $VERSION" --notes "Automated release. See docs/plan/ for change audit."
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "native/$DMG" "native/$DMG.sha256"
 
   bump-tap:
